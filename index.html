@@ -1,0 +1,423 @@
+<style>
+  :root{
+    --coral:#FF6F5E; --teal:#0E7C7B; --navy:#173A4E; --gold:#F2B441;
+    --sand:#FFF6EC; --lightteal:#E4F4F3; --lightcoral:#FFE7E3; --grey:#3D4C53;
+  }
+  *{box-sizing:border-box;}
+  body,.villee-root{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;color:var(--grey);}
+  .villee-root{max-width:520px;margin:0 auto;padding:0 0 40px 0;background:var(--sand);min-height:100%;}
+  .vhead{background:var(--navy);color:#fff;padding:18px 20px 16px;text-align:center;position:relative;}
+  .vhead h1{margin:0;font-size:15px;letter-spacing:.06em;font-weight:700;color:var(--gold);}
+  .vhead h2{margin:4px 0 0;font-size:20px;font-weight:800;}
+  .vgoldbar{height:4px;background:var(--gold);}
+  .vnav{display:flex;flex-wrap:wrap;gap:6px;padding:12px 14px;background:#fff;border-bottom:1px solid #eee;position:sticky;top:0;z-index:5;}
+  .vnav button{flex:1 1 auto;min-width:70px;border:none;background:var(--lightteal);color:var(--teal);font-weight:700;font-size:11.5px;padding:9px 6px;border-radius:8px;cursor:pointer;transition:.15s;}
+  .vnav button.active{background:var(--coral);color:#fff;}
+  .vpage{padding:20px 18px;}
+  .vcard{background:#fff;border-radius:14px;padding:18px;box-shadow:0 2px 10px rgba(23,58,78,.06);margin-bottom:16px;}
+  .vcard h3{margin:0 0 6px;color:var(--navy);font-size:17px;}
+  .vcard p.sub{margin:0 0 14px;color:#7d8b91;font-size:13px;line-height:1.4;}
+  label{display:block;font-size:12.5px;font-weight:700;color:var(--navy);margin:12px 0 5px;}
+  input[type=text],textarea{width:100%;padding:10px 12px;border:1.5px solid #e2e8ea;border-radius:9px;font-size:14px;font-family:inherit;background:#fbfdfd;}
+  textarea{min-height:74px;resize:vertical;}
+  input[type=text]:focus,textarea:focus{outline:none;border-color:var(--teal);}
+  .vbtn{display:inline-block;width:100%;margin-top:16px;background:var(--coral);color:#fff;border:none;padding:13px;border-radius:10px;font-weight:800;font-size:14.5px;cursor:pointer;letter-spacing:.02em;}
+  .vbtn:active{transform:scale(.98);}
+  .vbtn.secondary{background:var(--teal);}
+  .vbtn.ghost{background:transparent;border:1.5px solid var(--teal);color:var(--teal);}
+  .vmsg{margin-top:10px;font-size:12.5px;font-weight:700;color:var(--teal);text-align:center;min-height:16px;}
+  .vresultrow{margin:10px 0;}
+  .vresultrow .vlabel{font-size:12.5px;font-weight:700;color:var(--navy);display:flex;justify-content:space-between;}
+  .vbar-bg{background:#eef2f2;border-radius:6px;height:10px;margin-top:4px;overflow:hidden;}
+  .vbar-fill{background:linear-gradient(90deg,var(--coral),var(--gold));height:100%;border-radius:6px;}
+  .vconf-item{background:var(--lightcoral);border-radius:10px;padding:11px 13px;margin-bottom:9px;font-size:14px;color:var(--navy);font-style:italic;position:relative;}
+  .vconf-time{display:block;margin-top:4px;font-size:10.5px;color:#a98680;font-style:normal;}
+  .vchallenge-box{background:linear-gradient(135deg,var(--teal),#0a5f5e);color:#fff;border-radius:16px;padding:34px 20px;text-align:center;min-height:120px;display:flex;align-items:center;justify-content:center;}
+  .vchallenge-box p{font-size:19px;font-weight:800;margin:0;line-height:1.35;}
+  .vqr-wrap{text-align:center;padding:6px 0 2px;}
+  .vqr-wrap img{width:150px;height:150px;border-radius:10px;border:6px solid #fff;box-shadow:0 2px 10px rgba(23,58,78,.12);}
+  .vqr-cap{font-size:11px;color:#8a9aa2;margin-top:8px;}
+  .vlinkbox{display:flex;gap:8px;margin-top:10px;}
+  .vlinkbox input{flex:1;font-size:12px;}
+  .vcopybtn{background:var(--navy);color:#fff;border:none;border-radius:9px;padding:0 14px;font-size:12px;font-weight:700;cursor:pointer;}
+  .vpill{display:inline-block;background:var(--gold);color:var(--navy);font-weight:800;font-size:11px;padding:3px 10px;border-radius:20px;margin-bottom:8px;}
+  .vhome-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:6px;}
+  .vhome-tile{background:#fff;border-radius:14px;padding:18px 10px;text-align:center;box-shadow:0 2px 10px rgba(23,58,78,.06);cursor:pointer;border:2px solid transparent;}
+  .vhome-tile:active{border-color:var(--coral);}
+  .vhome-tile .emoji{font-size:30px;display:block;margin-bottom:6px;}
+  .vhome-tile .lbl{font-size:12.5px;font-weight:800;color:var(--navy);}
+  .vempty{color:#a3b0b5;font-size:13px;text-align:center;padding:14px 0;}
+  .voptions{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px;}
+  .voption{position:absolute;opacity:0;width:1px;height:1px;}
+  .voption-label{display:inline-block;background:#f3f6f6;border:1.5px solid #e2e8ea;border-radius:20px;padding:8px 14px;font-size:12.5px;font-weight:700;color:var(--navy);cursor:pointer;user-select:none;margin:0;}
+  .voption:checked + .voption-label{background:var(--coral);color:#fff;border-color:var(--coral);}
+  .voption:focus-visible + .voption-label{outline:2px solid var(--teal);outline-offset:1px;}
+  .vother-input{margin:8px 0 0;display:none;}
+  .vother-input.show{display:block;}
+</style>
+
+<div class="villee-root" id="villeeRoot">
+  <div class="vhead">
+    <h1>🏝️ THE VILLAGE PRESENTS</h1>
+    <h2 id="pageTitle">Love Island Finale Game Night</h2>
+  </div>
+  <div class="vgoldbar"></div>
+
+  <div class="vnav" id="vnav"></div>
+  <div class="vpage" id="vpage"></div>
+</div>
+
+<script>
+(function(){
+  const root = document.getElementById('villeeRoot');
+  const pageTitleEl = document.getElementById('pageTitle');
+  const navEl = document.getElementById('vnav');
+  const pageEl = document.getElementById('vpage');
+
+  const TABS = [
+    {id:'home', label:'🏠 Home'},
+    {id:'vote', label:'🏆 Votes'},
+    {id:'confess', label:'🌶️ Confess'},
+    {id:'match', label:'💛 Match'},
+    {id:'photos', label:'📸 Photos'},
+  ];
+
+  const COUPLES = ["Aniya & Carl", "Trinity & Bryce", "Melanie & Sincere", "Kayda & Zach"];
+  const ISLANDERS = ["Aniya", "Carl", "Trinity", "Bryce", "Melanie", "Sincere", "Kayda", "Zach"];
+
+  const VOTE_QUESTIONS = [
+    {id:'winner', q:'Who wins Love Island USA Season 8?', options: COUPLES},
+    {id:'breakup', q:'Which couple breaks up first?', options: COUPLES},
+    {id:'strongest', q:'Strongest couple?', options: COUPLES},
+    {id:'gameplayer', q:'Biggest game player?', options: ISLANDERS},
+    {id:'funniest', q:'Funniest Islander?', options: ISLANDERS},
+    {id:'redemption', q:'Best redemption arc?', options: ISLANDERS},
+    {id:'villain', q:'Biggest villain?', options: ISLANDERS},
+  ];
+
+  const MATCH_CHALLENGES = [
+    "Find someone who's lived in another country.",
+    "Find someone who has never watched Love Island before.",
+    "Find someone who's been to 3+ The Village events.",
+    "Find someone who'd join you for a pottery class.",
+    "Find someone who shares your favourite Islander.",
+  ];
+
+  const HUB_QR_DATA_URI = "data:image/png;base64,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";
+
+
+  function uid(){ return Date.now().toString(36)+Math.random().toString(36).slice(2,8); }
+
+  function qrImg(url, size){
+    size = size || 150;
+    const src = "https://api.qrserver.com/v1/create-qr-code/?size="+size+"x"+size+"&data="+encodeURIComponent(url);
+    return '<div class="vqr-wrap"><img src="'+src+'" alt="QR code"/></div>';
+  }
+
+  function currentUrl(){
+    try { return window.location.href; } catch(e){ return ''; }
+  }
+
+  function setActiveTab(id){
+    window.location.hash = id;
+    render(id);
+  }
+
+  function renderNav(activeId){
+    navEl.innerHTML = TABS.map(t =>
+      '<button data-tab="'+t.id+'" class="'+(t.id===activeId?'active':'')+'">'+t.label+'</button>'
+    ).join('');
+    Array.from(navEl.querySelectorAll('button')).forEach(btn=>{
+      btn.addEventListener('click', ()=> setActiveTab(btn.getAttribute('data-tab')));
+    });
+  }
+
+  async function safeGet(key, shared){
+    try {
+      const res = await window.storage.get(key, shared);
+      return res ? res.value : null;
+    } catch(e){ return null; }
+  }
+  async function safeSet(key, value, shared){
+    try { return await window.storage.set(key, value, shared); }
+    catch(e){ return null; }
+  }
+
+  // ---------------- HOME ----------------
+  function renderHome(){
+    pageTitleEl.textContent = "Love Island Finale Game Night";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <p class="sub">Scan this screen to jump straight in, or tap a game below.</p>
+        <div class="vqr-wrap"><img src="${HUB_QR_DATA_URI}" alt="QR code to the game hub"/></div>
+        <div class="vqr-cap">Scan with your phone camera</div>
+      </div>
+      <div class="vhome-grid">
+        <div class="vhome-tile" data-tab="vote"><span class="emoji">🏆</span><span class="lbl">America Votes</span></div>
+        <div class="vhome-tile" data-tab="confess"><span class="emoji">🌶️</span><span class="lbl">Villa Confessional</span></div>
+        <div class="vhome-tile" data-tab="match"><span class="emoji">💛</span><span class="lbl">Find Your Match</span></div>
+        <div class="vhome-tile" data-tab="photos"><span class="emoji">📸</span><span class="lbl">Photo Album</span></div>
+      </div>
+    `;
+    Array.from(pageEl.querySelectorAll('.vhome-tile')).forEach(el=>{
+      el.addEventListener('click', ()=> setActiveTab(el.getAttribute('data-tab')));
+    });
+  }
+
+  // ---------------- AMERICA VOTES ----------------
+  async function renderVote(){
+    pageTitleEl.textContent = "🏆 America Votes";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <span class="vpill">Prize: wine 🍷 or a free The Village ticket</span>
+        <h3>Cast your predictions</h3>
+        <p class="sub">One entry per person. Voting closes at 8:00 PM — MC keeps results secret until the show starts.</p>
+        <form id="voteForm">
+          ${VOTE_QUESTIONS.map(q => `
+            <label>${q.q}</label>
+            <div class="voptions">
+              ${q.options.map((opt,i) => `
+                <input type="radio" class="voption" id="${q.id}_${i}" name="${q.id}" value="${escapeHtml(opt)}">
+                <label class="voption-label" for="${q.id}_${i}">${opt}</label>
+              `).join('')}
+              <input type="radio" class="voption" id="${q.id}_other" name="${q.id}" value="__other__" data-other-for="${q.id}">
+              <label class="voption-label" for="${q.id}_other">Other</label>
+            </div>
+            <input type="text" class="vother-input" id="${q.id}_otherText" placeholder="Type your own answer" />
+          `).join('')}
+          <button type="submit" class="vbtn">Submit My Predictions</button>
+        </form>
+        <div class="vmsg" id="voteMsg"></div>
+      </div>
+      <div class="vcard">
+        <h3>Live Results</h3>
+        <p class="sub">For the MC — reveal during commercial breaks.</p>
+        <div id="voteResults"><div class="vempty">Loading...</div></div>
+        <button class="vbtn ghost" id="refreshVotes">Refresh Results</button>
+      </div>
+    `;
+
+    // toggle "Other" text field per question
+    Array.from(pageEl.querySelectorAll('input[data-other-for]')).forEach(radio=>{
+      const qid = radio.getAttribute('data-other-for');
+      const otherInput = document.getElementById(qid+'_otherText');
+      const groupRadios = pageEl.querySelectorAll(`input[name="${qid}"]`);
+      groupRadios.forEach(r => r.addEventListener('change', ()=>{
+        if(r.value === '__other__' && r.checked){ otherInput.classList.add('show'); otherInput.focus(); }
+        else if(r.checked){ otherInput.classList.remove('show'); }
+      }));
+    });
+
+    document.getElementById('voteForm').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const fd = new FormData(e.target);
+      const answers = {};
+      VOTE_QUESTIONS.forEach(q => {
+        let v = (fd.get(q.id)||'').trim();
+        if(v === '__other__'){
+          const otherEl = document.getElementById(q.id+'_otherText');
+          v = otherEl ? otherEl.value.trim() : '';
+        }
+        answers[q.id] = v;
+      });
+      const hasAny = Object.values(answers).some(v => v.length>0);
+      const msgEl = document.getElementById('voteMsg');
+      if(!hasAny){ msgEl.textContent = "Pick an answer for at least one question first!"; return; }
+      msgEl.textContent = "Submitting...";
+      const existing = await safeGet('america_votes_submissions', true);
+      let arr = [];
+      try { arr = existing ? JSON.parse(existing) : []; } catch(e){ arr = []; }
+      arr.push({id: uid(), ts: Date.now(), answers});
+      const ok = await safeSet('america_votes_submissions', JSON.stringify(arr), true);
+      if(ok){ msgEl.textContent = "Vote submitted — thank you! 🎉"; e.target.reset();
+        Array.from(pageEl.querySelectorAll('.vother-input')).forEach(el=>el.classList.remove('show'));
+        loadVoteResults(); }
+      else { msgEl.textContent = "Something went wrong, please try again."; }
+    });
+
+    document.getElementById('refreshVotes').addEventListener('click', loadVoteResults);
+    loadVoteResults();
+  }
+
+  async function loadVoteResults(){
+    const el = document.getElementById('voteResults');
+    if(!el) return;
+    el.innerHTML = '<div class="vempty">Loading...</div>';
+    const raw = await safeGet('america_votes_submissions', true);
+    let arr = [];
+    try { arr = raw ? JSON.parse(raw) : []; } catch(e){ arr = []; }
+    if(arr.length === 0){ el.innerHTML = '<div class="vempty">No votes submitted yet.</div>'; return; }
+
+    let html = '';
+    VOTE_QUESTIONS.forEach(q=>{
+      const counts = {};
+      arr.forEach(sub=>{
+        const v = (sub.answers && sub.answers[q.id]) ? sub.answers[q.id].trim() : '';
+        if(v){ const key = v.toLowerCase(); counts[key] = counts[key] || {label:v, n:0}; counts[key].n++; }
+      });
+      const total = Object.values(counts).reduce((s,c)=>s+c.n,0);
+      const top = Object.values(counts).sort((a,b)=>b.n-a.n).slice(0,3);
+      html += `<div class="vresultrow"><div class="vlabel"><span>${q.q}</span><span>${total} vote${total===1?'':'s'}</span></div>`;
+      if(top.length===0){
+        html += `<div class="vempty" style="padding:4px 0;">No answers yet</div>`;
+      } else {
+        top.forEach(t=>{
+          const pct = total ? Math.round((t.n/total)*100) : 0;
+          html += `<div style="font-size:12.5px;margin-top:6px;">${t.label} — ${pct}% (${t.n})</div>
+                   <div class="vbar-bg"><div class="vbar-fill" style="width:${pct}%;"></div></div>`;
+        });
+      }
+      html += `</div>`;
+    });
+    el.innerHTML = html;
+  }
+
+  // ---------------- VILLA CONFESSIONAL ----------------
+  async function renderConfess(){
+    pageTitleEl.textContent = "🌶️ The Villa Confessional";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Spill your hottest Love Island take</h3>
+        <p class="sub">100% anonymous — the MC will read the best ones on the mic tonight.</p>
+        <textarea id="confessText" placeholder='e.g. "Movie Night is better than Casa Amor."' maxlength="240"></textarea>
+        <button class="vbtn" id="confessSubmit">Submit Anonymously</button>
+        <div class="vmsg" id="confessMsg"></div>
+      </div>
+      <div class="vcard">
+        <h3>The Wall</h3>
+        <p class="sub">Everyone's confessions, newest first.</p>
+        <div id="confessList"><div class="vempty">Loading...</div></div>
+        <button class="vbtn ghost" id="refreshConfess">Refresh Wall</button>
+      </div>
+    `;
+
+    document.getElementById('confessSubmit').addEventListener('click', async ()=>{
+      const ta = document.getElementById('confessText');
+      const msgEl = document.getElementById('confessMsg');
+      const text = ta.value.trim();
+      if(!text){ msgEl.textContent = "Type a take first!"; return; }
+      msgEl.textContent = "Submitting...";
+      const existing = await safeGet('confessions', true);
+      let arr = [];
+      try { arr = existing ? JSON.parse(existing) : []; } catch(e){ arr = []; }
+      arr.push({id: uid(), ts: Date.now(), text});
+      const ok = await safeSet('confessions', JSON.stringify(arr), true);
+      if(ok){ msgEl.textContent = "Posted anonymously 🌶️"; ta.value=''; loadConfessions(); }
+      else { msgEl.textContent = "Something went wrong, please try again."; }
+    });
+
+    document.getElementById('refreshConfess').addEventListener('click', loadConfessions);
+    loadConfessions();
+  }
+
+  async function loadConfessions(){
+    const el = document.getElementById('confessList');
+    if(!el) return;
+    el.innerHTML = '<div class="vempty">Loading...</div>';
+    const raw = await safeGet('confessions', true);
+    let arr = [];
+    try { arr = raw ? JSON.parse(raw) : []; } catch(e){ arr = []; }
+    if(arr.length===0){ el.innerHTML = '<div class="vempty">No confessions yet — be the first!</div>'; return; }
+    arr.sort((a,b)=> b.ts - a.ts);
+    el.innerHTML = arr.map(c => {
+      const d = new Date(c.ts);
+      const time = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
+      return `<div class="vconf-item">"${escapeHtml(c.text)}"<span class="vconf-time">${time}</span></div>`;
+    }).join('');
+  }
+
+  function escapeHtml(s){
+    return s.replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));
+  }
+
+  // ---------------- FIND YOUR MATCH ----------------
+  function renderMatch(){
+    pageTitleEl.textContent = "💛 Find Your Match";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Your mixer challenge</h3>
+        <p class="sub">Tap the button, get a random challenge, then go find that person in the room.</p>
+        <div class="vchallenge-box"><p id="challengeText">Tap below to get your challenge</p></div>
+        <button class="vbtn secondary" id="newChallenge">Get My Challenge</button>
+      </div>
+    `;
+    document.getElementById('newChallenge').addEventListener('click', ()=>{
+      const pick = MATCH_CHALLENGES[Math.floor(Math.random()*MATCH_CHALLENGES.length)];
+      document.getElementById('challengeText').textContent = pick;
+    });
+  }
+
+  const DEFAULT_ALBUM_LINK = "https://photos.app.goo.gl/CnsSoEXTDxHM1cEt8";
+
+  // ---------------- PHOTO ALBUM ----------------
+  function renderPhotos(){
+    pageTitleEl.textContent = "📸 Shared Photo Album";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Drop your photos from tonight</h3>
+        <p class="sub">Tap below to open tonight's shared album and add your photos. Organizers can update the link here any time — it saves for everyone at the event.</p>
+        <label>Shared album link</label>
+        <div class="vlinkbox">
+          <input type="text" id="albumLink" placeholder="https://photos.app.goo.gl/..." />
+          <button class="vcopybtn" id="saveLink">Save</button>
+        </div>
+        <div class="vmsg" id="albumMsg"></div>
+      </div>
+      <div class="vcard" id="albumOpenCard" style="display:none;">
+        <h3>Tonight's Album</h3>
+        <div id="albumQr"></div>
+        <a class="vbtn" id="openAlbumBtn" href="#" target="_blank" rel="noopener">Open Photo Album</a>
+      </div>
+    `;
+
+    document.getElementById('saveLink').addEventListener('click', async ()=>{
+      const val = document.getElementById('albumLink').value.trim();
+      const msgEl = document.getElementById('albumMsg');
+      if(!val){ msgEl.textContent = "Paste the album link first."; return; }
+      msgEl.textContent = "Saving...";
+      const ok = await safeSet('shared_album_link', val, true);
+      if(ok){ msgEl.textContent = "Saved for everyone!"; showAlbum(val); }
+      else { msgEl.textContent = "Something went wrong, please try again."; }
+    });
+
+    loadAlbum();
+  }
+
+  async function loadAlbum(){
+    let raw = await safeGet('shared_album_link', true);
+    if(!raw){
+      // Seed the default album link for everyone the first time this loads
+      raw = DEFAULT_ALBUM_LINK;
+      await safeSet('shared_album_link', raw, true);
+    }
+    document.getElementById('albumLink').value = raw;
+    showAlbum(raw);
+  }
+
+  function showAlbum(url){
+    const card = document.getElementById('albumOpenCard');
+    if(!card) return;
+    card.style.display = 'block';
+    document.getElementById('openAlbumBtn').href = url;
+    document.getElementById('albumQr').innerHTML = qrImg(url, 150);
+  }
+
+  // ---------------- ROUTER ----------------
+  function render(tab){
+    renderNav(tab);
+    if(tab === 'vote') renderVote();
+    else if(tab === 'confess') renderConfess();
+    else if(tab === 'match') renderMatch();
+    else if(tab === 'photos') renderPhotos();
+    else renderHome();
+  }
+
+  function getTabFromHash(){
+    const h = (window.location.hash || '').replace('#','');
+    return TABS.find(t=>t.id===h) ? h : 'home';
+  }
+
+  window.addEventListener('hashchange', ()=> render(getTabFromHash()));
+  render(getTabFromHash());
+})();
+</script>
