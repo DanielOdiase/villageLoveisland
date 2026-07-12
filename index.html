@@ -132,22 +132,124 @@
     });
   }
 
-  async function safeGet(key, shared){
+  const SUPABASE_URL = "https://humzeiyhggbeobkwbzxj.supabase.co";
+  const SUPABASE_KEY = "sb_publishable_mNvF53WGPBY5aF2SLbnLFQ_A5JZFU-a";
+  const SUPABASE_REST = SUPABASE_URL + "/rest/v1";
+
+  async function sbInsert(table, row){
     try {
-      const res = await window.storage.get(key, shared);
-      return res ? res.value : null;
-    } catch(e){ return null; }
+      const res = await fetch(`${SUPABASE_REST}/${table}`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'return=minimal'
+        },
+        body: JSON.stringify(row)
+      });
+      return res.ok;
+    } catch(e){ return false; }
   }
-  async function safeSet(key, value, shared){
-    try { return await window.storage.set(key, value, shared); }
-    catch(e){ return null; }
+
+  async function sbSelect(table, queryString){
+    try {
+      const url = `${SUPABASE_REST}/${table}?select=*${queryString||''}`;
+      const res = await fetch(url, {
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+        }
+      });
+      if(!res.ok) return [];
+      return await res.json();
+    } catch(e){ return []; }
+  }
+
+  async function sbGetSetting(key){
+    const rows = await sbSelect('settings', `&key=eq.${encodeURIComponent(key)}`);
+    return rows.length ? rows[0].value : null;
+  }
+
+  async function sbUpsertSetting(key, value){
+    try {
+      const res = await fetch(`${SUPABASE_REST}/settings`, {
+        method: 'POST',
+        headers: {
+          'apikey': SUPABASE_KEY,
+          'Authorization': `Bearer ${SUPABASE_KEY}`,
+          'Content-Type': 'application/json',
+          'Prefer': 'resolution=merge-duplicates,return=minimal'
+        },
+        body: JSON.stringify({key, value})
+      });
+      return res.ok;
+    } catch(e){ return false; }
+  }
+
+  // Local per-device persistence (this file is meant to be self-hosted,
+  // so a real browser's localStorage works fine here)
+  function localGet(key){
+    try { return window.localStorage.getItem(key); } catch(e){ return null; }
+  }
+  function localSet(key, value){
+    try { window.localStorage.setItem(key, value); return true; } catch(e){ return false; }
+  }
+
+  // ---------------- GUEST REGISTRATION GATE ----------------
+  let guestProfile = null;
+
+  async function ensureGuestProfile(){
+    if(guestProfile) return guestProfile;
+    const raw = localGet('village_guest_profile');
+    if(raw){
+      try { guestProfile = JSON.parse(raw); } catch(e){ guestProfile = null; }
+    }
+    return guestProfile;
+  }
+
+  function renderRegister(pendingTab){
+    navEl.innerHTML = '';
+    pageTitleEl.textContent = "👋 Welcome!";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Before you play...</h3>
+        <p class="sub">Tell us a bit about yourself so the host can shout you out tonight. Takes 10 seconds — then the games unlock.</p>
+        <label>Name</label>
+        <input type="text" id="regName" placeholder="Your name" />
+        <label>Instagram</label>
+        <input type="text" id="regInstagram" placeholder="@yourhandle" />
+        <label>Email</label>
+        <input type="text" id="regEmail" placeholder="you@email.com" />
+        <button class="vbtn" id="regSubmit">Let's Play! 🌴</button>
+        <div class="vmsg" id="regMsg"></div>
+      </div>
+    `;
+    document.getElementById('regSubmit').addEventListener('click', async ()=>{
+      const name = document.getElementById('regName').value.trim();
+      const instagram = document.getElementById('regInstagram').value.trim();
+      const email = document.getElementById('regEmail').value.trim();
+      const msgEl = document.getElementById('regMsg');
+      if(!name || !instagram || !email){ msgEl.textContent = "Please fill in all three fields."; return; }
+      const emailOk = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+      if(!emailOk){ msgEl.textContent = "That email doesn't look right."; return; }
+      msgEl.textContent = "Saving...";
+      const profile = {name, instagram, email};
+      const ok = await sbInsert('guests', profile);
+      if(!ok){ msgEl.textContent = "Something went wrong, please try again."; return; }
+      localSet('village_guest_profile', JSON.stringify(profile));
+      guestProfile = profile;
+      render(pendingTab || 'home');
+    });
   }
 
   // ---------------- HOME ----------------
   function renderHome(){
     pageTitleEl.textContent = "Love Island Finale Game Night";
+    const nameBit = guestProfile ? `<p class="sub" style="margin-bottom:2px;">👋 Playing as <b>${escapeHtml(guestProfile.name)}</b></p>` : '';
     pageEl.innerHTML = `
       <div class="vcard">
+        ${nameBit}
         <p class="sub">Scan this screen to jump straight in, or tap a game below.</p>
         <div class="vqr-wrap"><img src="${HUB_QR_DATA_URI}" alt="QR code to the game hub"/></div>
         <div class="vqr-cap">Scan with your phone camera</div>
@@ -171,7 +273,7 @@
       <div class="vcard">
         <span class="vpill">Prize: wine 🍷 or a free The Village ticket</span>
         <h3>Cast your predictions</h3>
-        <p class="sub">One entry per person. Voting closes at 8:00 PM — MC keeps results secret until the show starts.</p>
+        <p class="sub">One entry per person. Voting closes at 8:00 PM — results stay secret until the host reveals them.</p>
         <form id="voteForm">
           ${VOTE_QUESTIONS.map(q => `
             <label>${q.q}</label>
@@ -188,12 +290,6 @@
           <button type="submit" class="vbtn">Submit My Predictions</button>
         </form>
         <div class="vmsg" id="voteMsg"></div>
-      </div>
-      <div class="vcard">
-        <h3>Live Results</h3>
-        <p class="sub">For the MC — reveal during commercial breaks.</p>
-        <div id="voteResults"><div class="vempty">Loading...</div></div>
-        <button class="vbtn ghost" id="refreshVotes">Refresh Results</button>
       </div>
     `;
 
@@ -218,41 +314,32 @@
           const otherEl = document.getElementById(q.id+'_otherText');
           v = otherEl ? otherEl.value.trim() : '';
         }
-        answers[q.id] = v;
+        answers[q.id] = v || null;
       });
-      const hasAny = Object.values(answers).some(v => v.length>0);
+      const hasAny = Object.values(answers).some(v => v);
       const msgEl = document.getElementById('voteMsg');
       if(!hasAny){ msgEl.textContent = "Pick an answer for at least one question first!"; return; }
       msgEl.textContent = "Submitting...";
-      const existing = await safeGet('america_votes_submissions', true);
-      let arr = [];
-      try { arr = existing ? JSON.parse(existing) : []; } catch(e){ arr = []; }
-      arr.push({id: uid(), ts: Date.now(), answers});
-      const ok = await safeSet('america_votes_submissions', JSON.stringify(arr), true);
+      const ok = await sbInsert('votes', answers);
       if(ok){ msgEl.textContent = "Vote submitted — thank you! 🎉"; e.target.reset();
         Array.from(pageEl.querySelectorAll('.vother-input')).forEach(el=>el.classList.remove('show'));
-        loadVoteResults(); }
+      }
       else { msgEl.textContent = "Something went wrong, please try again."; }
     });
-
-    document.getElementById('refreshVotes').addEventListener('click', loadVoteResults);
-    loadVoteResults();
   }
 
   async function loadVoteResults(){
     const el = document.getElementById('voteResults');
     if(!el) return;
     el.innerHTML = '<div class="vempty">Loading...</div>';
-    const raw = await safeGet('america_votes_submissions', true);
-    let arr = [];
-    try { arr = raw ? JSON.parse(raw) : []; } catch(e){ arr = []; }
-    if(arr.length === 0){ el.innerHTML = '<div class="vempty">No votes submitted yet.</div>'; return; }
+    const rows = await sbSelect('votes');
+    if(rows.length === 0){ el.innerHTML = '<div class="vempty">No votes submitted yet.</div>'; return; }
 
     let html = '';
     VOTE_QUESTIONS.forEach(q=>{
       const counts = {};
-      arr.forEach(sub=>{
-        const v = (sub.answers && sub.answers[q.id]) ? sub.answers[q.id].trim() : '';
+      rows.forEach(row=>{
+        const v = row[q.id] ? String(row[q.id]).trim() : '';
         if(v){ const key = v.toLowerCase(); counts[key] = counts[key] || {label:v, n:0}; counts[key].n++; }
       });
       const total = Object.values(counts).reduce((s,c)=>s+c.n,0);
@@ -270,6 +357,75 @@
       html += `</div>`;
     });
     el.innerHTML = html;
+  }
+
+  // ---------------- HOST RESULTS (hidden — not in guest nav) ----------------
+  const HOST_PIN = "8000";
+  let hostUnlocked = false;
+
+  function renderHostGate(){
+    pageTitleEl.textContent = "🔒 Host Access";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Results — Host Only</h3>
+        <p class="sub">This page is separate from what guests see. Enter the host PIN to reveal live vote results.</p>
+        <label>PIN</label>
+        <input type="text" id="hostPin" inputmode="numeric" placeholder="••••" maxlength="8" />
+        <button class="vbtn" id="hostUnlock">Unlock Results</button>
+        <div class="vmsg" id="hostMsg"></div>
+      </div>
+    `;
+    document.getElementById('hostUnlock').addEventListener('click', ()=>{
+      const val = document.getElementById('hostPin').value.trim();
+      const msgEl = document.getElementById('hostMsg');
+      if(val === HOST_PIN){ hostUnlocked = true; renderHostResults(); }
+      else { msgEl.textContent = "Wrong PIN — try again."; }
+    });
+  }
+
+  function renderHostResults(){
+    pageTitleEl.textContent = "🏆 Results (Host Only)";
+    pageEl.innerHTML = `
+      <div class="vcard">
+        <h3>Live Results</h3>
+        <p class="sub">Guests never see this screen — reveal these yourself during commercial breaks.</p>
+        <div id="voteResults"><div class="vempty">Loading...</div></div>
+        <button class="vbtn ghost" id="refreshVotes">Refresh Results</button>
+      </div>
+      <div class="vcard">
+        <h3>Guest List</h3>
+        <p class="sub">Everyone who's registered to play tonight.</p>
+        <div id="guestList"><div class="vempty">Loading...</div></div>
+        <button class="vbtn ghost" id="refreshGuests">Refresh Guest List</button>
+      </div>
+      <div class="vcard">
+        <button class="vbtn secondary" id="lockAgain">Lock This Screen</button>
+      </div>
+    `;
+    document.getElementById('refreshVotes').addEventListener('click', loadVoteResults);
+    document.getElementById('refreshGuests').addEventListener('click', loadGuestList);
+    document.getElementById('lockAgain').addEventListener('click', ()=>{ hostUnlocked = false; renderHostGate(); });
+    loadVoteResults();
+    loadGuestList();
+  }
+
+  async function loadGuestList(){
+    const el = document.getElementById('guestList');
+    if(!el) return;
+    el.innerHTML = '<div class="vempty">Loading...</div>';
+    const rows = await sbSelect('guests', '&order=created_at.asc');
+    if(rows.length === 0){ el.innerHTML = '<div class="vempty">No guests registered yet.</div>'; return; }
+    el.innerHTML = `<div class="vresultrow"><div class="vlabel"><span>Total Guests</span><span>${rows.length}</span></div></div>` +
+      rows.map(g => `<div class="vconf-item" style="font-style:normal;">
+        <b>${escapeHtml(g.name)}</b><br/>
+        📷 ${escapeHtml(g.instagram||'—')}<br/>
+        ✉️ ${escapeHtml(g.email||'—')}
+      </div>`).join('');
+  }
+
+  function renderHost(){
+    if(hostUnlocked) renderHostResults();
+    else renderHostGate();
   }
 
   // ---------------- VILLA CONFESSIONAL ----------------
@@ -297,11 +453,7 @@
       const text = ta.value.trim();
       if(!text){ msgEl.textContent = "Type a take first!"; return; }
       msgEl.textContent = "Submitting...";
-      const existing = await safeGet('confessions', true);
-      let arr = [];
-      try { arr = existing ? JSON.parse(existing) : []; } catch(e){ arr = []; }
-      arr.push({id: uid(), ts: Date.now(), text});
-      const ok = await safeSet('confessions', JSON.stringify(arr), true);
+      const ok = await sbInsert('confessions', {text});
       if(ok){ msgEl.textContent = "Posted anonymously 🌶️"; ta.value=''; loadConfessions(); }
       else { msgEl.textContent = "Something went wrong, please try again."; }
     });
@@ -314,13 +466,10 @@
     const el = document.getElementById('confessList');
     if(!el) return;
     el.innerHTML = '<div class="vempty">Loading...</div>';
-    const raw = await safeGet('confessions', true);
-    let arr = [];
-    try { arr = raw ? JSON.parse(raw) : []; } catch(e){ arr = []; }
-    if(arr.length===0){ el.innerHTML = '<div class="vempty">No confessions yet — be the first!</div>'; return; }
-    arr.sort((a,b)=> b.ts - a.ts);
-    el.innerHTML = arr.map(c => {
-      const d = new Date(c.ts);
+    const rows = await sbSelect('confessions', '&order=created_at.desc');
+    if(rows.length===0){ el.innerHTML = '<div class="vempty">No confessions yet — be the first!</div>'; return; }
+    el.innerHTML = rows.map(c => {
+      const d = new Date(c.created_at);
       const time = d.toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'});
       return `<div class="vconf-item">"${escapeHtml(c.text)}"<span class="vconf-time">${time}</span></div>`;
     }).join('');
@@ -375,7 +524,7 @@
       const msgEl = document.getElementById('albumMsg');
       if(!val){ msgEl.textContent = "Paste the album link first."; return; }
       msgEl.textContent = "Saving...";
-      const ok = await safeSet('shared_album_link', val, true);
+      const ok = await sbUpsertSetting('shared_album_link', val);
       if(ok){ msgEl.textContent = "Saved for everyone!"; showAlbum(val); }
       else { msgEl.textContent = "Something went wrong, please try again."; }
     });
@@ -384,14 +533,13 @@
   }
 
   async function loadAlbum(){
-    let raw = await safeGet('shared_album_link', true);
-    if(!raw){
-      // Seed the default album link for everyone the first time this loads
-      raw = DEFAULT_ALBUM_LINK;
-      await safeSet('shared_album_link', raw, true);
+    let val = await sbGetSetting('shared_album_link');
+    if(!val){
+      val = DEFAULT_ALBUM_LINK;
+      await sbUpsertSetting('shared_album_link', val);
     }
-    document.getElementById('albumLink').value = raw;
-    showAlbum(raw);
+    document.getElementById('albumLink').value = val;
+    showAlbum(val);
   }
 
   function showAlbum(url){
@@ -403,7 +551,15 @@
   }
 
   // ---------------- ROUTER ----------------
-  function render(tab){
+  async function render(tab){
+    if(tab === 'host'){
+      // Hidden host route: no nav bar shown, keeps it visually separate from guest pages
+      navEl.innerHTML = '';
+      renderHost();
+      return;
+    }
+    const profile = await ensureGuestProfile();
+    if(!profile){ renderRegister(tab); return; }
     renderNav(tab);
     if(tab === 'vote') renderVote();
     else if(tab === 'confess') renderConfess();
@@ -414,6 +570,7 @@
 
   function getTabFromHash(){
     const h = (window.location.hash || '').replace('#','');
+    if(h === 'host') return 'host';
     return TABS.find(t=>t.id===h) ? h : 'home';
   }
 
